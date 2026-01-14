@@ -1,141 +1,135 @@
-# Getting Started with ARfit-kit
+# Getting Started with ARFitKit
 
-AR試着SDKをプロジェクトに統合するためのガイドです。
+ARFitKitを使って、あなたのアプリにAR試着機能を追加しましょう。
 
-## プラットフォーム別インストール
+## 📦 インストール
 
-### iOS (Swift)
+### iOS (Swift Package Manager)
 
-**Swift Package Manager**
-```swift
-// Package.swift
-dependencies: [
-    .package(url: "https://github.com/your-org/ARfit-kit.git", from: "1.0.0")
-]
-```
+1. Xcodeでプロジェクトを開く
+2. **File → Add Package Dependencies...** を選択
+3. 以下のURLを入力:
+   ```
+   https://github.com/NEXRO-dev/ARFit-Kit.git
+   ```
+4. バージョンを選択して **Add Package**
 
-**使用例**
-```swift
-import ARFitKit
-import SwiftUI
+### Android (Gradle)
 
-struct TryOnView: View {
-    @StateObject private var arFitKit = ARFitKit()
-    
-    var body: some View {
-        ARFitKitView(arFitKit: arFitKit)
-            .task {
-                try? arFitKit.initialize()
-            }
-    }
-    
-    func tryOnClothing(image: UIImage) async {
-        let garment = try? await arFitKit.loadGarment(image: image)
-        if let garment = garment {
-            try? arFitKit.tryOn(garment: garment)
-        }
-    }
-}
-```
-
----
-
-### Android (Kotlin)
-
-**Gradle**
+`settings.gradle.kts` に追加:
 ```kotlin
-implementation("com.arfitkit:arfitkit:1.0.0")
+include(":arfitkit")
+project(":arfitkit").projectDir = file("libs/ARfit-kit/platforms/android/arfitkit")
 ```
 
-**使用例**
+`app/build.gradle.kts` に依存関係を追加:
 ```kotlin
-class TryOnActivity : AppCompatActivity() {
-    private lateinit var arFitKit: ARFitKit
-    
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        
-        arFitKit = ARFitKit(this)
-        arFitKit.initialize()
-        
-        lifecycleScope.launch {
-            arFitKit.startSession(surfaceView, this@TryOnActivity)
-        }
-    }
-    
-    suspend fun tryOnClothing(bitmap: Bitmap) {
-        val garment = arFitKit.loadGarment(bitmap)
-        arFitKit.tryOn(garment)
-    }
+dependencies {
+    implementation(project(":arfitkit"))
 }
-```
-
----
-
-### Web (TypeScript)
-
-**npm**
-```bash
-npm install arfit-kit
-```
-
-**使用例**
-```typescript
-import { ARFitKit, GarmentType } from 'arfit-kit';
-
-const arFitKit = new ARFitKit();
-await arFitKit.initialize();
-
-const canvas = document.getElementById('ar-canvas') as HTMLCanvasElement;
-await arFitKit.startSession(canvas);
-
-// 衣服を読み込んで試着
-const garment = await arFitKit.loadGarment('/images/tshirt.png', GarmentType.TSHIRT);
-arFitKit.tryOn(garment);
-```
-
----
 
 ### React Native
 
-**npm**
 ```bash
 npm install arfit-kit-react-native
+cd ios && pod install
 ```
 
-**使用例**
-```tsx
-import { ARFitKitView, useARFitKit, GarmentType } from 'arfit-kit-react-native';
+## 🚀 基本的な使い方
 
-function TryOnScreen() {
-  const { loadGarment, tryOn, isLoading } = useARFitKit();
-  
-  const handleTryOn = async (imageUri: string) => {
-    const garment = await loadGarment(imageUri, GarmentType.TSHIRT);
-    await tryOn(garment);
-  };
-  
-  return (
-    <View style={{ flex: 1 }}>
-      <ARFitKitView 
-        style={{ flex: 1 }}
-        onReady={() => console.log('AR Ready')}
-      />
-      <Button title="Try On" onPress={() => handleTryOn('path/to/image')} />
-    </View>
-  );
+### Step 1: 初期化
+
+```swift
+// iOS
+import ARFitKit
+
+let arFitKit = ARFitKit()
+try await arFitKit.initialize(config: SessionConfig(
+    targetFPS: 60,
+    enableClothSimulation: true
+))
+```
+
+```kotlin
+// Android
+import com.arfitkit.ARFitKit
+
+val arFitKit = ARFitKit(context)
+arFitKit.initialize(SessionConfig(
+    targetFPS = 60,
+    enableClothSimulation = true
+))
+```
+
+### Step 2: セッション開始
+
+ARセッションを開始し、カメラフィードの取得を開始します。
+
+```swift
+// iOS - ARViewを渡す
+arFitKit.startSession(view: arView)
+```
+
+```kotlin
+// Android - SurfaceViewを渡す
+arFitKit.startSession(surfaceView, lifecycleOwner)
+```
+
+### Step 3: 衣服を読み込み
+
+2D画像から3D衣服モデルを生成します。
+
+```swift
+// iOS
+let garment = try await arFitKit.loadGarment(
+    image: UIImage(named: "tshirt")!,
+    type: .tshirt
+)
+```
+
+```kotlin
+// Android
+val garment = arFitKit.loadGarment(
+    bitmap = BitmapFactory.decodeResource(resources, R.drawable.tshirt),
+    type = GarmentType.TSHIRT
+)
+```
+
+### Step 4: 試着
+
+```swift
+arFitKit.tryOn(garment: garment)
+```
+
+### Step 5: クリーンアップ
+
+```swift
+arFitKit.stopSession()
+```
+
+## 📸 スナップショット撮影
+
+現在のAR画面をキャプチャ:
+
+```swift
+if let snapshot = arFitKit.captureSnapshot() {
+    UIImageWriteToSavedPhotosAlbum(snapshot, nil, nil, nil)
 }
 ```
 
-## 必要条件
+## 🎯 パフォーマンスのヒント
 
-| Platform | 最小バージョン | 必要な機能 |
-|----------|---------------|-----------|
-| iOS | 14.0+ | ARKit, カメラ |
-| Android | API 24+ | ARCore, カメラ |
-| Web | Chrome 94+ | WebGPU/WebGL2, WebRTC |
+1. **targetFPS**: デバイスに応じて30〜60を設定
+2. **maxGarments**: 同時に表示する衣服は3枚まで推奨
+3. **enableClothSimulation**: 低スペック端末ではfalseにして軽量化
 
-## 次のステップ
+## 🔧 トラブルシューティング
 
-- [API Reference](api-reference.md) - 全APIドキュメント
-- [Architecture](architecture.md) - システムアーキテクチャの詳細
+### "ARKit対応デバイスが必要です"
+→ iPhone 6s以降、iOS 14以上が必要です
+
+### "ARCore not available"
+→ Google Play ServicesのARCoreがインストールされているか確認
+
+### FPSが低い
+→ `enableClothSimulation: false` を試す、または `targetFPS` を下げる
