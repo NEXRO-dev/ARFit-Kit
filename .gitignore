@@ -1,0 +1,34 @@
+# Build outputs
+build/
+dist/
+*.o
+*.a
+*.so
+*.dylib
+
+# IDE
+.idea/
+.vscode/
+*.xcworkspace
+*.xcuserdata
+
+# Dependencies
+node_modules/
+Pods/
+.gradle/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# ML Models (large files)
+ml-models/*.onnx
+ml-models/*.tflite
+!ml-models/.gitkeep
+
+# Temporary
+*.tmp
+*.temp
