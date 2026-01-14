@@ -14,8 +14,24 @@ option(ARFIT_BUILD_ANDROID "Build Android library" OFF)
 # Find dependencies
 find_package(OpenCV REQUIRED)
 
-# MediaPipe (custom find module or submodule)
-# find_package(MediaPipe REQUIRED)
+include(FetchContent)
+
+# TensorFlow Lite
+message(STATUS "Fetching TensorFlow Lite...")
+# Note: For a real project, consider using a prebuilt binary or system package to save build time.
+FetchContent_Declare(
+  tensorflow_lite
+  GIT_REPOSITORY https://github.com/tensorflow/tensorflow.git
+  GIT_TAG        v2.14.0
+  GIT_SHALLOW    TRUE
+  SOURCE_SUBDIR  tensorflow/lite/c
+)
+# FetchContent_MakeAvailable(tensorflow_lite) 
+# For this demo, we assume headers are available or we stub them if build fails.
+# In a full build, we would add tensorflow-lite target here.
+
+# ONNX Runtime
+# Similar approach for ONNX Runtime
 
 # Core library sources
 set(ARFIT_CORE_SOURCES

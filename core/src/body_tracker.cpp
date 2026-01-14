@@ -8,6 +8,8 @@
 #include <cmath>
 #include <iostream>
 #include <opencv2/opencv.hpp>
+#include <thread>
+// #include "tensorflow/lite/c/c_api.h"
 
 namespace arfit {
 
@@ -77,32 +79,29 @@ Result<BodyTrackingResult> BodyTracker::processFrame(const CameraFrame &frame) {
     rgbImage = cvImage; // Assume RGB if not 4 channels (unsafe in prod)
   }
 
-  // 2. Run MediaPipe Inference (Simulation)
-  // In production, this pushes the packet to the MP graph and waits for the
-  // output stream. Here we simulate the output landmarks.
+  // 2. Run MediaPipe Inference (TFLite)
+  // TODO: Link TFLite execution
+  // TfLiteInterpreterInvoke(interpreter);
 
+  // Simulation:
   for (int i = 0; i < MEDIA_PIPE_LANDMARKS; ++i) {
-    // Simulate a T-pose roughly centered in the screen
-    // In a real app, these values come from the MediaPipe output packet
     result.pose.landmarks[i] = {0.0f, 0.0f, 0.0f};
     result.pose.visibility[i] = 0.9f;
   }
 
-  // Simulate some simple movement based on time for testing visualizers
+  // Simulate inference time
+  std::this_thread::sleep_for(std::chrono::milliseconds(15)); // ~60fps budget
+
+  // Simulate some movement
   float time =
       std::chrono::duration<float>(startTime.time_since_epoch()).count();
   float sway = std::sin(time) * 0.1f;
 
-  // Head
-  result.pose.landmarks[0] = {0.0f + sway, -0.8f, 0.0f}; // Nose
-
-  // Shoulders
-  result.pose.landmarks[11] = {-0.2f + sway, -0.6f, 0.0f}; // Left Shoulder
-  result.pose.landmarks[12] = {0.2f + sway, -0.6f, 0.0f};  // Right Shoulder
-
-  // Hips
-  result.pose.landmarks[23] = {-0.15f, 0.0f, 0.0f}; // Left Hip
-  result.pose.landmarks[24] = {0.15f, 0.0f, 0.0f};  // Right Hip
+  result.pose.landmarks[0] = {0.0f + sway, -0.8f, 0.0f};   // Nose
+  result.pose.landmarks[11] = {-0.2f + sway, -0.6f, 0.0f}; // L Shoulder
+  result.pose.landmarks[12] = {0.2f + sway, -0.6f, 0.0f};  // R Shoulder
+  result.pose.landmarks[23] = {-0.15f, 0.0f, 0.0f};        // L Hip
+  result.pose.landmarks[24] = {0.15f, 0.0f, 0.0f};         // R Hip
 
   result.pose.confidence = 0.98f;
 
