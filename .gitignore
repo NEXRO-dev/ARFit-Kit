@@ -32,3 +32,8 @@ ml-models/*.tflite
 # Temporary
 *.tmp
 *.temp
+
+# macOS Metadata
+._*
+.DS_Store
+
