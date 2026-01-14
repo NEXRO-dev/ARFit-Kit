@@ -53,43 +53,24 @@ const garment = await arFitKit.loadGarment(imageUrl);
 arFitKit.tryOn(garment);
 ```
 
-### React Native
-
-```tsx
-import { ARFitKitView, loadGarment, tryOn } from 'arfit-kit-react-native';
-
-function TryOnScreen() {
-  const handleTryOn = async () => {
-    const garment = await loadGarment(imageUri);
-    tryOn(garment);
-  };
-
-  return <ARFitKitView onReady={handleTryOn} />;
-}
-```
-
 ## 📦 インストール
 
 ### iOS (Swift Package Manager)
-```swift
-dependencies: [
-    .package(url: "https://github.com/your-org/ARfit-kit.git", from: "1.0.0")
-]
+Xcodeで「Add Package Dependencies」から以下のURLを追加:
+```
+https://github.com/NEXRO-dev/ARFit-Kit.git
 ```
 
 ### Android (Gradle)
-```gradle
-implementation 'com.arfitkit:arfitkit:1.0.0'
+`settings.gradle.kts` に以下を追加してサブモジュールとして利用:
+```kotlin
+include(":arfitkit")
+project(":arfitkit").projectDir = file("path/to/ARfit-kit/platforms/android/arfitkit")
 ```
 
 ### Web (npm)
 ```bash
 npm install arfit-kit
-```
-
-### React Native
-```bash
-npm install arfit-kit-react-native
 ```
 
 ## 🏗️ アーキテクチャ
@@ -118,32 +99,6 @@ npm install arfit-kit-react-native
 | iOS | 14.0+ | ARKit対応デバイス |
 | Android | API 24+ | ARCore対応デバイス |
 | Web | Chrome 94+ | WebGPU/WebGL2対応ブラウザ |
-
-## 🛠️ 開発
-
-```bash
-# リポジトリをクローン
-git clone https://github.com/your-org/ARfit-kit.git
-cd ARfit-kit
-
-# コアエンジンをビルド
-cd core
-mkdir build && cd build
-cmake .. && make
-
-# テストを実行
-ctest
-```
-
-## 📖 ドキュメント
-
-- [Getting Started](docs/getting-started.md)
-- [API Reference](docs/api-reference.md)
-- [Architecture](docs/architecture.md)
-
-## 🤝 コントリビューション
-
-コントリビューションを歓迎します！詳細は [CONTRIBUTING.md](CONTRIBUTING.md) をご覧ください。
 
 ## 📄 ライセンス
 
