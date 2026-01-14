@@ -1,76 +1,41 @@
 {
     "name": "arfit-kit-react-native",
     "version": "1.0.0",
-    "description": "React Native bindings for ARFitKit - AR Virtual Try-On SDK",
-    "main": "lib/commonjs/index",
-    "module": "lib/module/index",
-    "types": "lib/typescript/index.d.ts",
-    "react-native": "src/index",
-    "source": "src/index",
+    "description": "React Native SDK for AR Virtual Try-On",
+    "main": "src/index.ts",
+    "types": "src/index.d.ts",
+    "react-native": "src/index.ts",
+    "source": "src/index.ts",
     "files": [
         "src",
-        "lib",
-        "android",
         "ios",
-        "cpp",
-        "*.podspec"
+        "android",
+        "arfit-kit-react-native.podspec"
     ],
     "scripts": {
-        "build": "bob build",
         "typescript": "tsc --noEmit",
-        "lint": "eslint \"**/*.{js,ts,tsx}\"",
-        "prepare": "bob build",
-        "example": "yarn --cwd example"
+        "lint": "eslint \"src/**/*.{js,ts,tsx}\""
     },
     "keywords": [
         "react-native",
         "ar",
         "virtual-try-on",
-        "augmented-reality",
-        "fashion"
+        "arkit",
+        "arcore"
     ],
     "repository": {
         "type": "git",
-        "url": "https://github.com/your-org/ARfit-kit.git"
+        "url": "https://github.com/NEXRO-dev/ARFit-Kit.git"
     },
-    "author": "ARfit-kit Contributors",
+    "author": "NEXRO-dev",
     "license": "MIT",
-    "bugs": {
-        "url": "https://github.com/your-org/ARfit-kit/issues"
-    },
-    "homepage": "https://github.com/your-org/ARfit-kit#readme",
-    "publishConfig": {
-        "registry": "https://registry.npmjs.org/"
-    },
-    "devDependencies": {
-        "@types/react": "^18.2.48",
-        "@types/react-native": "^0.72.8",
-        "react": "18.2.0",
-        "react-native": "0.73.2",
-        "react-native-builder-bob": "^0.23.2",
-        "typescript": "^5.3.3"
-    },
     "peerDependencies": {
         "react": "*",
         "react-native": "*"
     },
-    "codegenConfig": {
-        "name": "RNARFitKitSpec",
-        "type": "modules",
-        "jsSrcsDir": "src"
-    },
-    "react-native-builder-bob": {
-        "source": "src",
-        "output": "lib",
-        "targets": [
-            "commonjs",
-            "module",
-            [
-                "typescript",
-                {
-                    "project": "tsconfig.build.json"
-                }
-            ]
-        ]
+    "devDependencies": {
+        "@types/react": "^18.0.0",
+        "@types/react-native": "^0.72.0",
+        "typescript": "^5.0.0"
     }
 }

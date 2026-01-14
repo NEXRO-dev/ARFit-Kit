@@ -53,6 +53,23 @@ const garment = await arFitKit.loadGarment(imageUrl);
 arFitKit.tryOn(garment);
 ```
 
+### React Native
+
+```tsx
+import ARFitKit, { GarmentType } from 'arfit-kit-react-native';
+
+// Initialize
+await ARFitKit.initialize({ targetFPS: 60 });
+await ARFitKit.startSession();
+
+// Load and try on
+const garment = await ARFitKit.loadGarment(imageUri, GarmentType.TSHIRT);
+await ARFitKit.tryOn(garment.id);
+
+// Listen to events
+ARFitKit.onPoseUpdated((pose) => console.log(pose));
+```
+
 ## 📦 インストール
 
 ### iOS (Swift Package Manager)
@@ -71,6 +88,12 @@ project(":arfitkit").projectDir = file("path/to/ARfit-kit/platforms/android/arfi
 ### Web (npm)
 ```bash
 npm install arfit-kit
+```
+
+### React Native
+```bash
+npm install arfit-kit-react-native
+cd ios && pod install
 ```
 
 ## 🏗️ アーキテクチャ
