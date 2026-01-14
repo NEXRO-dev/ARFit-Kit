@@ -1,0 +1,168 @@
+/**
+ * ARFitKit Cloth Physics Compute Shader (Vulkan/GLSL)
+ * Position Based Dynamics (PBD) solver for cloth simulation
+ */
+
+#version 450
+
+// Particle structure
+struct Particle {
+    vec3 position;
+    float invMass;
+    vec3 velocity;
+    float _pad1;
+    vec3 prevPosition;
+    float _pad2;
+};
+
+// Distance constraint
+struct DistanceConstraint {
+    uint indexA;
+    uint indexB;
+    float restLength;
+    float stiffness;
+};
+
+// Collision sphere
+struct CollisionSphere {
+    vec3 center;
+    float radius;
+};
+
+// Uniform buffer
+layout(binding = 0) uniform SimParams {
+    float dt;
+    float gravity;
+    float damping;
+    uint numParticles;
+    uint numConstraints;
+    uint numSpheres;
+    uint substeps;
+} params;
+
+layout(std430, binding = 1) buffer ParticleBuffer {
+    Particle particles[];
+};
+
+layout(std430, binding = 2) buffer ConstraintBuffer {
+    DistanceConstraint constraints[];
+};
+
+layout(std430, binding = 3) buffer CollisionBuffer {
+    CollisionSphere spheres[];
+};
+
+// ========== Apply Forces Shader ==========
+#ifdef FORCES_PASS
+layout(local_size_x = 256) in;
+
+void main() {
+    uint id = gl_GlobalInvocationID.x;
+    if (id >= params.numParticles) return;
+    
+    Particle p = particles[id];
+    
+    // Skip pinned
+    if (p.invMass == 0.0) return;
+    
+    // Save position
+    p.prevPosition = p.position;
+    
+    // Gravity
+    p.velocity.y -= params.gravity * params.dt;
+    
+    // Damping
+    p.velocity *= (1.0 - params.damping);
+    
+    // Predict
+    p.position += p.velocity * params.dt;
+    
+    particles[id] = p;
+}
+#endif
+
+// ========== Solve Constraints Shader ==========
+#ifdef CONSTRAINTS_PASS
+layout(local_size_x = 256) in;
+
+void main() {
+    uint id = gl_GlobalInvocationID.x;
+    if (id >= params.numConstraints) return;
+    
+    DistanceConstraint c = constraints[id];
+    
+    Particle pA = particles[c.indexA];
+    Particle pB = particles[c.indexB];
+    
+    vec3 delta = pB.position - pA.position;
+    float currentLength = length(delta);
+    
+    if (currentLength < 0.0001) return;
+    
+    float error = (currentLength - c.restLength) / currentLength;
+    vec3 correction = delta * error * 0.5 * c.stiffness;
+    
+    float totalMass = pA.invMass + pB.invMass;
+    if (totalMass == 0.0) return;
+    
+    float wA = pA.invMass / totalMass;
+    float wB = pB.invMass / totalMass;
+    
+    // Note: In real impl, use atomic operations or graph coloring
+    if (pA.invMass > 0.0) {
+        particles[c.indexA].position += correction * wA;
+    }
+    if (pB.invMass > 0.0) {
+        particles[c.indexB].position -= correction * wB;
+    }
+}
+#endif
+
+// ========== Collision Shader ==========
+#ifdef COLLISION_PASS
+layout(local_size_x = 256) in;
+
+void main() {
+    uint id = gl_GlobalInvocationID.x;
+    if (id >= params.numParticles) return;
+    
+    Particle p = particles[id];
+    if (p.invMass == 0.0) return;
+    
+    float clothThickness = 0.01;
+    
+    for (uint i = 0; i < params.numSpheres; i++) {
+        CollisionSphere sphere = spheres[i];
+        
+        vec3 diff = p.position - sphere.center;
+        float dist = length(diff);
+        
+        float penetration = (sphere.radius + clothThickness) - dist;
+        
+        if (penetration > 0.0 && dist > 0.0001) {
+            vec3 normal = diff / dist;
+            p.position += normal * penetration;
+        }
+    }
+    
+    particles[id] = p;
+}
+#endif
+
+// ========== Update Velocities Shader ==========
+#ifdef VELOCITY_PASS
+layout(local_size_x = 256) in;
+
+void main() {
+    uint id = gl_GlobalInvocationID.x;
+    if (id >= params.numParticles) return;
+    
+    Particle p = particles[id];
+    
+    if (p.invMass > 0.0) {
+        p.velocity = (p.position - p.prevPosition) / params.dt;
+    }
+    
+    particles[id] = p;
+}
+#endif
