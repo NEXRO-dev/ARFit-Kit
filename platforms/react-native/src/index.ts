@@ -98,6 +98,8 @@ export function captureSnapshot(): Promise<string> {
     return ARFitKitModule.captureSnapshot();
 }
 
+export { ARFitKitView } from './ARFitKitView';
+
 export default {
     initialize,
     startSession,
