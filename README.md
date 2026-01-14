@@ -123,7 +123,13 @@ cd ios && pod install
 | Android | API 24+ | ARCore対応デバイス |
 | Web | Chrome 94+ | WebGPU/WebGL2対応ブラウザ |
 
-## 📄 ライセンス
+## � ドキュメント
+
+- [Getting Started](docs/getting-started.md) - 導入ガイド
+- [API Reference](docs/api-reference.md) - API詳細リファレンス
+- [Architecture](docs/architecture.md) - システムアーキテクチャ
+
+## �📄 ライセンス
 
 MIT License - 詳細は [LICENSE](LICENSE) をご覧ください。
 
