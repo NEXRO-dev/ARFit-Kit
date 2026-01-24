@@ -2,10 +2,10 @@
     "name": "arfit-kit-react-native",
     "version": "1.0.0",
     "description": "React Native SDK for AR Virtual Try-On",
-    "main": "src/index.ts",
+    "main": "src/index.tsx",
     "types": "src/index.d.ts",
-    "react-native": "src/index.ts",
-    "source": "src/index.ts",
+    "react-native": "src/index.tsx",
+    "source": "src/index.tsx",
     "files": [
         "src",
         "ios",

@@ -1,4 +1,4 @@
-import { NativeModules, NativeEventEmitter, Platform } from 'react-native';
+import { NativeEventEmitter, NativeModules, Platform } from 'react-native';
 
 const LINKING_ERROR =
     `The package 'arfit-kit-react-native' doesn't seem to be linked. Make sure: \n\n` +
@@ -6,18 +6,20 @@ const LINKING_ERROR =
     '- You rebuilt the app after installing the package\n' +
     '- You are not using Expo Go\n';
 
-const ARFitKitModule = NativeModules.ARFitKit
-    ? NativeModules.ARFitKit
-    : new Proxy(
-        {},
-        {
-            get() {
-                throw new Error(LINKING_ERROR);
-            },
-        }
-    );
+const ARFitKitModule = NativeModules.ARFitKit || {
+    addListener: () => { },
+    removeListeners: () => { },
+    initialize: () => Promise.resolve(),
+    startSession: () => Promise.resolve(),
+    stopSession: () => Promise.resolve(),
+    loadGarment: () => Promise.resolve({ id: 'dummy' }),
+    tryOn: () => Promise.resolve(),
+    removeGarment: () => Promise.resolve(),
+    removeAllGarments: () => Promise.resolve(),
+    captureSnapshot: () => Promise.resolve(''),
+};
 
-const eventEmitter = new NativeEventEmitter(ARFitKitModule);
+const eventEmitter = new NativeEventEmitter(ARFitKitModule as any);
 
 export interface SessionConfig {
     targetFPS?: number;

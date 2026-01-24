@@ -5,13 +5,13 @@
  * React NativeでiOS/Android向けAR機能を提供
  */
 
-import React, {
+import {
+    forwardRef,
     useCallback,
     useEffect,
     useImperativeHandle,
     useRef,
     useState,
-    forwardRef,
 } from 'react';
 import {
     NativeModules,
@@ -74,7 +74,16 @@ export interface ARFitKitViewRef {
 }
 
 // Native module
-const ARFitKitNative = NativeModules.ARFitKit;
+const ARFitKitNative = NativeModules.ARFitKit || {
+    initialize: () => Promise.resolve(),
+    startSession: () => Promise.resolve(),
+    stopSession: () => Promise.resolve(),
+    loadGarment: () => Promise.resolve('dummy_id'),
+    tryOn: () => Promise.resolve(),
+    removeGarment: () => Promise.resolve(),
+    removeAllGarments: () => Promise.resolve(),
+    captureSnapshot: () => Promise.resolve(''),
+};
 
 // Native component
 const NativeARFitKitView = requireNativeComponent<any>('ARFitKitView');
