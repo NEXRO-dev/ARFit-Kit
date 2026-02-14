@@ -70,7 +70,8 @@ public class Garment: Identifiable, ObservableObject {
     @Published public var isLoading: Bool = false
     @Published public var conversionProgress: Float = 0.0
     
-    internal var nativeGarment: UnsafeMutableRawPointer?
+    /// Objective-C Bridge 側の衣服データへの参照
+    internal var bridgeGarment: BridgeGarment?
     
     public init(type: GarmentType, image: UIImage) {
         self.type = type
@@ -109,7 +110,8 @@ public class ARFitKit: NSObject, ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     
     // Objective-C Bridge
-    private let bridge = ARFitKitBridge()
+    /// sharedInstanceを使用してReact Nativeモジュールと同じインスタンスを共有
+    private let bridge = ARFitKitBridge.sharedInstance()
     
     // MARK: - Callbacks
     
@@ -227,7 +229,8 @@ public class ARFitKit: NSObject, ObservableObject {
                 }
                 
                 let garment = Garment(type: type, image: image)
-                // In a real app, bind bridgeGarment to garment instance
+                /// BridgeGarment参照を保持（tryOn/removeで使用）
+                garment.bridgeGarment = bridgeGarment
                 
                 DispatchQueue.main.async {
                     garment.isLoading = false
@@ -245,24 +248,27 @@ public class ARFitKit: NSObject, ObservableObject {
             throw ARFitKitError.sessionNotStarted
         }
         
-        // Check max garments
         if activeGarments.count >= config.maxGarments {
             activeGarments.removeFirst()
         }
         
         activeGarments.append(garment)
         
-        // TODO: Pass garment to bridge
-        // bridge.tryOnGarment(garment.bridgeObject)
+        /// BridgeGarmentを通じてCore C++エンジンに試着を指示
+        if let bg = garment.bridgeGarment {
+            bridge.tryOnGarment(bg)
+        }
         
-        print("Trying on garment: \(garment.type)")
+        print("ARFitKit: Trying on garment: \(garment.type)")
     }
     
     /// 衣服を削除
     /// - Parameter garment: 削除する衣服
     public func removeGarment(garment: Garment) {
         activeGarments.removeAll { $0.id == garment.id }
-        // bridge.removeGarment(...)
+        if let bg = garment.bridgeGarment {
+            bridge.removeGarment(bg)
+        }
     }
     
     /// すべての衣服を削除
