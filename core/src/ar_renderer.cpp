@@ -99,9 +99,16 @@ public:
           Point2D p1 = project(v1.position, z1);
           Point2D p2 = project(v2.position, z2);
           
-          // 簡易ライティング（法線とライト方向の内積）
-          Point3D lightDir = {0.0f, 0.5f, 1.0f}; // 正面やや上からの光
-          float lightIntensity = std::max(0.2f, v0.normal.x*lightDir.x + v0.normal.y*lightDir.y + v0.normal.z*lightDir.z);
+          // 面の法線の平均を使ったランバート反射ライティング
+          Point3D avgNormal = {
+              (v0.normal.x + v1.normal.x + v2.normal.x) / 3.0f,
+              (v0.normal.y + v1.normal.y + v2.normal.y) / 3.0f,
+              (v0.normal.z + v1.normal.z + v2.normal.z) / 3.0f
+          };
+          Point3D lightDir = {0.2f, 0.5f, 1.0f}; 
+          float lightLen = std::sqrt(lightDir.x*lightDir.x + lightDir.y*lightDir.y + lightDir.z*lightDir.z);
+          lightDir = lightDir * (1.0f / lightLen);
+          float lightIntensity = std::max(0.3f, avgNormal.x*lightDir.x + avgNormal.y*lightDir.y + avgNormal.z*lightDir.z);
 
           // バウンディングボックス
           int minX = std::max(0, (int)std::floor(std::min({p0.x, p1.x, p2.x})));
@@ -111,21 +118,37 @@ public:
           
           for (int y = minY; y <= maxY; ++y) {
               for (int x = minX; x <= maxX; ++x) {
-                  float u, v, w;
-                  if (barycentric(p0, p1, p2, {(float)x, (float)y}, u, v, w)) {
-                      float z = u * z0 + v * z1 + w * z2;
+                  float bu, bv, bw;
+                  if (barycentric(p0, p1, p2, {(float)x, (float)y}, bu, bv, bw)) {
+                      float z = bu * z0 + bv * z1 + bw * z2;
                       int idx = y * width + x;
                       
                       if (z < depthBuffer[idx]) {
                           depthBuffer[idx] = z;
                           
-                          // テクスチャサンプリング (簡易版: 頂点カラー的に混合)
-                          // 本来は obj.texture からサンプリング
+                          // 重心座標でUV座標を補間
+                          float texU = bu * v0.texCoord.x + bv * v1.texCoord.x + bw * v2.texCoord.x;
+                          float texV = bu * v0.texCoord.y + bv * v1.texCoord.y + bw * v2.texCoord.y;
+                          
+                          uint8_t tr, tg, tb, ta;
+                          if (obj.texture) {
+                              // テクスチャからピクセルをサンプリング
+                              obj.texture->sample(texU, texV, tr, tg, tb, ta);
+                          } else {
+                              tr = 200; tg = 200; tb = 200; ta = 255;
+                          }
+                          
+                          // ライティング適用
                           int px = idx * 4;
-                          framebuffer[px] = (uint8_t)(255 * lightIntensity);
-                          framebuffer[px+1] = (uint8_t)(220 * lightIntensity);
-                          framebuffer[px+2] = (uint8_t)(220 * lightIntensity);
-                          framebuffer[px+3] = 255;
+                          
+                          // アルファブレンディング（テクスチャの透明部分は背景を透過）
+                          if (ta > 10) {
+                              float alpha = ta / 255.0f;
+                              framebuffer[px] = (uint8_t)std::min(255.0f, tr * lightIntensity * alpha + framebuffer[px] * (1.0f - alpha));
+                              framebuffer[px+1] = (uint8_t)std::min(255.0f, tg * lightIntensity * alpha + framebuffer[px+1] * (1.0f - alpha));
+                              framebuffer[px+2] = (uint8_t)std::min(255.0f, tb * lightIntensity * alpha + framebuffer[px+2] * (1.0f - alpha));
+                              framebuffer[px+3] = 255;
+                          }
                       }
                   }
               }
@@ -133,6 +156,7 @@ public:
       }
     }
   }
+
 
   void drawBackground() {
     if (currentFrame.image.pixels.empty()) return;

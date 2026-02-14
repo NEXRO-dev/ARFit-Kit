@@ -75,6 +75,12 @@ public:
   void setData(const ImageData &image);
   ImageData getData() const;
 
+  /// 生のピクセルデータからテクスチャを読み込む
+  void loadFromMemory(const uint8_t* data, int width, int height, int channels);
+
+  /// UV座標(0.0~1.0)からRGBAピクセルをサンプリング
+  void sample(float u, float v, uint8_t &r, uint8_t &g, uint8_t &b, uint8_t &a) const;
+
   // GPU management
   void uploadToGPU();
   void releaseGPU();

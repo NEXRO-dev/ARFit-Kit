@@ -156,3 +156,20 @@ Java_com_arfitkit_ARFitKit_nativeRemoveAllGarments(JNIEnv *env,
   }
 }
 
+/**
+ * 個別の衣服を削除
+ */
+extern "C" JNIEXPORT void JNICALL
+Java_com_arfitkit_ARFitKit_nativeRemoveGarment(JNIEnv *env,
+                                               jobject /* this */,
+                                               jstring garmentId) {
+  if (!g_arFitKit || !garmentId) return;
+  
+  const char *nativeId = env->GetStringUTFChars(garmentId, nullptr);
+  std::string idString(nativeId);
+  env->ReleaseStringUTFChars(garmentId, nativeId);
+  
+  g_arFitKit->removeGarment(idString);
+}
+
+

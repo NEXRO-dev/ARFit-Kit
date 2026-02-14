@@ -258,7 +258,7 @@ class ARFitKit(private val context: Context) {
      */
     fun removeGarment(garment: Garment) {
         _activeGarments.value = _activeGarments.value.filter { it.id != garment.id }
-        // Note: Native removal by ID not implemented in this demo stub
+        nativeRemoveGarment(garment.id)
     }
     
     /**
@@ -277,20 +277,96 @@ class ARFitKit(private val context: Context) {
         processingScope.cancel()
     }
     
+    /**
+     * ARCore フレーム取得・処理ループ
+     * セッションがアクティブな間、カメラフレームを取得し
+     * Core C++ エンジンで処理（物理・レンダリング）した結果をコールバックに渡す
+     */
     private suspend fun processingLoop() {
+        // 処理結果の転送用Bitmap（毎フレーム再生成を避けるためキャッシュ）
+        var outputBitmap: Bitmap? = null
+        
         while (isActive && _isSessionActive.value) {
             try {
-                // In production: Use ImageReader to get YUV buffers directly
-                // Here we might just delay or capture frame if accessible
+                val session = arSession ?: break
                 
-                // Update FPS
+                // ARCoreから最新フレームを取得
+                val frame = session.update()
+                val camera = frame.camera
+                
+                // カメラのトラッキング状態を確認
+                if (camera.trackingState != TrackingState.TRACKING) {
+                    delay(16)
+                    continue
+                }
+                
+                // カメラ画像を取得してBitmapに変換
+                val image = frame.acquireCameraImage()
+                val width = image.width
+                val height = image.height
+                
+                // 出力Bitmapのサイズが異なる場合は再作成
+                if (outputBitmap == null || outputBitmap.width != width || outputBitmap.height != height) {
+                    outputBitmap?.recycle()
+                    outputBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                }
+                
+                // YUV → RGBA変換してBitmapにコピー
+                val yBuffer = image.planes[0].buffer
+                val uBuffer = image.planes[1].buffer
+                val vBuffer = image.planes[2].buffer
+                
+                val ySize = yBuffer.remaining()
+                val uSize = uBuffer.remaining()
+                val vSize = vBuffer.remaining()
+                
+                val nv21 = ByteArray(ySize + uSize + vSize)
+                yBuffer.get(nv21, 0, ySize)
+                vBuffer.get(nv21, ySize, vSize)
+                uBuffer.get(nv21, ySize + vSize, uSize)
+                
+                val yuvImage = android.graphics.YuvImage(
+                    nv21, android.graphics.ImageFormat.NV21, width, height, null
+                )
+                val out = java.io.ByteArrayOutputStream()
+                yuvImage.compressToJpeg(android.graphics.Rect(0, 0, width, height), 90, out)
+                val jpegBytes = out.toByteArray()
+                val decodedBitmap = android.graphics.BitmapFactory.decodeByteArray(jpegBytes, 0, jpegBytes.size)
+                
+                // decodedBitmapをoutputBitmapにコピー
+                val canvas = android.graphics.Canvas(outputBitmap!!)
+                canvas.drawBitmap(decodedBitmap, 0f, 0f, null)
+                decodedBitmap.recycle()
+                
+                image.close()
+                
+                // JNI経由でCore C++エンジンにフレームを処理させる
+                // outputBitmapは in-place で書き換えられる
+                nativeProcessFrame(outputBitmap, frame.timestamp)
+                
+                // FPSの更新
                 val fps = nativeGetCurrentFPS()
                 _currentFPS.value = fps
                 
-                delay(16) // ~60fps target
+                // 処理済みフレームをコールバック経由でUIに配信
+                withContext(Dispatchers.Main) {
+                    onFrameProcessed?.invoke(outputBitmap!!)
+                }
+                
+            } catch (e: com.google.ar.core.exceptions.NotYetAvailableException) {
+                // フレームがまだ利用不可（ARCore初期化中）
+                delay(16)
             } catch (e: Exception) {
-                onError?.invoke(ARFitKitError.ModelLoadFailed) // Generic error
+                android.util.Log.e("ARFitKit", "Processing error: ${e.message}")
+                delay(16)
             }
         }
+        
+        // ループ終了時にBitmapを解放
+        outputBitmap?.recycle()
     }
+    
+    // ネイティブメソッド: 個別の衣服を削除
+    private external fun nativeRemoveGarment(garmentId: String)
 }
+

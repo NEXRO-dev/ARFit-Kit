@@ -137,4 +137,48 @@ void Texture::generateMipmaps() {
 
 bool Texture::hasMipmaps() const { return pImpl->hasMips; }
 
+/**
+ * 生のピクセルデータからテクスチャを読み込む
+ */
+void Texture::loadFromMemory(const uint8_t* data, int width, int height, int channels) {
+  pImpl->data.width = width;
+  pImpl->data.height = height;
+  pImpl->data.channels = channels;
+  pImpl->data.pixels.assign(data, data + width * height * channels);
+  
+  if (channels == 4) pImpl->format = TextureFormat::RGBA8;
+  else if (channels == 3) pImpl->format = TextureFormat::RGB8;
+  else if (channels == 1) pImpl->format = TextureFormat::R8;
+}
+
+/**
+ * UV座標からピクセルカラーをサンプリング（バイリニア補間）
+ */
+void Texture::sample(float u, float v, uint8_t &r, uint8_t &g, uint8_t &b, uint8_t &a) const {
+  const auto& d = pImpl->data;
+  if (d.pixels.empty() || d.width == 0 || d.height == 0) {
+    r = g = b = a = 0;
+    return;
+  }
+  
+  // UV座標をクランプ (0.0 ~ 1.0)
+  u = std::max(0.0f, std::min(1.0f, u));
+  v = std::max(0.0f, std::min(1.0f, v));
+  
+  int x = (int)(u * (d.width - 1));
+  int y = (int)(v * (d.height - 1));
+  int ch = d.channels;
+  int idx = (y * d.width + x) * ch;
+  
+  if (idx >= 0 && idx < (int)d.pixels.size() - ch + 1) {
+    r = d.pixels[idx];
+    g = (ch >= 2) ? d.pixels[idx + 1] : d.pixels[idx];
+    b = (ch >= 3) ? d.pixels[idx + 2] : d.pixels[idx];
+    a = (ch >= 4) ? d.pixels[idx + 3] : 255;
+  } else {
+    r = g = b = 0; a = 255;
+  }
+}
+
 } // namespace arfit
+
