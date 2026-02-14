@@ -1,116 +1,121 @@
 #import "ARFitKit.h"
 #import <React/RCTLog.h>
+#import "ARFitKitBridge.h"
 
-// Import the C++ bridge (assuming it's built as part of the app)
-// #import "ARFitKitBridge.h"
+@implementation ARFitKit
 
-@implementation ARFitKit {
-  bool hasListeners;
-  // ARFitKitBridge *bridge; // Actual C++ bridge instance
-}
+RCT_EXPORT_MODULE();
 
-RCT_EXPORT_MODULE()
-
-- (NSArray<NSString *> *)supportedEvents {
-  return @[ @"onPoseUpdated", @"onFPSUpdated", @"onError" ];
-}
-
-- (void)startObserving {
-  hasListeners = YES;
-}
-
-- (void)stopObserving {
-  hasListeners = NO;
-}
-
+/**
+ * 初期化
+ */
 RCT_EXPORT_METHOD(initialize : (NSDictionary *)config resolver : (
     RCTPromiseResolveBlock)resolve rejecter : (RCTPromiseRejectBlock)reject) {
   RCTLogInfo(@"[ARFitKit] Initializing with config: %@", config);
 
-  // TODO: Initialize C++ core via bridge
-  // bridge = [[ARFitKitBridge alloc] init];
-  // [bridge initializeWithConfig:config error:nil];
+  NSError *error = nil;
+  BOOL success = [[ARFitKitBridge sharedInstance] initializeWithConfig:config error:&error];
 
-  resolve(nil);
+  if (success) {
+    resolve(nil);
+  } else {
+    reject(@"init_failed", error.localizedDescription, error);
+  }
 }
 
-RCT_EXPORT_METHOD(startSession : (RCTPromiseResolveBlock)
-                      resolve rejecter : (RCTPromiseRejectBlock)reject) {
+/**
+ * セッション開始
+ */
+RCT_EXPORT_METHOD(startSession : (RCTPromiseResolveBlock)resolve rejecter : (
+    RCTPromiseResolveBlock)reject) {
   RCTLogInfo(@"[ARFitKit] Starting session");
-
-  // TODO: Start AR session
-  // [bridge startSession];
-
+  [[ARFitKitBridge sharedInstance] startSession];
   resolve(nil);
 }
 
-RCT_EXPORT_METHOD(stopSession : (RCTPromiseResolveBlock)
-                      resolve rejecter : (RCTPromiseRejectBlock)reject) {
+/**
+ * セッション停止
+ */
+RCT_EXPORT_METHOD(stopSession : (RCTPromiseResolveBlock)resolve rejecter : (
+    RCTPromiseRejectBlock)reject) {
   RCTLogInfo(@"[ARFitKit] Stopping session");
-
-  // TODO: Stop AR session
-  // [bridge stopSession];
-
+  [[ARFitKitBridge sharedInstance] stopSession];
   resolve(nil);
 }
 
-RCT_EXPORT_METHOD(loadGarment : (NSString *)imageUri type : (NSInteger)
-                      type resolver : (RCTPromiseResolveBlock)
-                          resolve rejecter : (RCTPromiseRejectBlock)reject) {
-  RCTLogInfo(@"[ARFitKit] Loading garment from: %@", imageUri);
+/**
+ * 衣服の読み込み
+ */
+RCT_EXPORT_METHOD(loadGarment : (NSString *)imageUri resolver : (
+    RCTPromiseResolveBlock)resolve rejecter : (RCTPromiseRejectBlock)reject) {
+  RCTLogInfo(@"[ARFitKit] Loading garment from URI: %@", imageUri);
 
-  // TODO: Load image and convert to garment
-  // NSString *garmentId = [bridge loadGarmentFromUri:imageUri type:type];
+  // 簡易的なローカルファイル読み込み
+  NSURL *url = [NSURL URLWithString:imageUri];
+  NSData *data = [NSData dataWithContentsOfURL:url];
+  UIImage *image = [UIImage imageWithData:data];
 
-  NSString *garmentId = [[NSUUID UUID] UUIDString]; // Placeholder
+  if (!image) {
+    reject(@"invalid_image", @"画像を読み込めませんでした", nil);
+    return;
+  }
 
-  NSDictionary *garment =
-      @{@"id" : garmentId,
-        @"type" : @(type),
-        @"imageUri" : imageUri};
-
-  resolve(garment);
+  [[ARFitKitBridge sharedInstance] loadGarment:image type:@"tshirt" completion:^(BridgeGarment * _Nullable garment, NSError * _Nullable error) {
+    if (error) {
+      reject(@"load_failed", error.localizedDescription, error);
+    } else {
+      resolve(@{
+        @"id" : garment.uuid,
+        @"type" : garment.type,
+        @"imageUri" : imageUri
+      });
+    }
+  }];
 }
 
+/**
+ * 試着
+ */
 RCT_EXPORT_METHOD(tryOn : (NSString *)garmentId resolver : (
     RCTPromiseResolveBlock)resolve rejecter : (RCTPromiseRejectBlock)reject) {
   RCTLogInfo(@"[ARFitKit] Trying on garment: %@", garmentId);
 
-  // TODO: Apply garment
-  // [bridge tryOn:garmentId];
+  BridgeGarment *garment = [[BridgeGarment alloc] initWithId:garmentId type:@"unknown"];
+  [[ARFitKitBridge sharedInstance] tryOnGarment:garment];
 
   resolve(nil);
 }
 
+/**
+ * 衣服の削除
+ */
 RCT_EXPORT_METHOD(removeGarment : (NSString *)garmentId resolver : (
     RCTPromiseResolveBlock)resolve rejecter : (RCTPromiseRejectBlock)reject) {
-  // TODO: Remove garment
+  RCTLogInfo(@"[ARFitKit] Removing garment: %@", garmentId);
+
+  BridgeGarment *garment = [[BridgeGarment alloc] initWithId:garmentId type:@"unknown"];
+  [[ARFitKitBridge sharedInstance] removeGarment:garment];
+
   resolve(nil);
 }
 
-RCT_EXPORT_METHOD(removeAllGarments : (RCTPromiseResolveBlock)
-                      resolve rejecter : (RCTPromiseRejectBlock)reject) {
-  // TODO: Remove all
+/**
+ * すべての衣服の削除
+ */
+RCT_EXPORT_METHOD(removeAllGarments : (RCTPromiseResolveBlock)resolve rejecter : (
+    RCTPromiseRejectBlock)reject) {
+  RCTLogInfo(@"[ARFitKit] Removing all garments");
+  [[ARFitKitBridge sharedInstance] removeAllGarments];
   resolve(nil);
 }
 
+/**
+ * スナップショットの作成
+ */
 RCT_EXPORT_METHOD(captureSnapshot : (RCTPromiseResolveBlock)
                       resolve rejecter : (RCTPromiseRejectBlock)reject) {
-  // TODO: Capture and return image URI
+  // TODO: スナップショット機能を実装
   resolve(@"");
-}
-
-// Helper to send events to JS
-- (void)sendPoseUpdate:(NSDictionary *)pose {
-  if (hasListeners) {
-    [self sendEventWithName:@"onPoseUpdated" body:pose];
-  }
-}
-
-- (void)sendFPSUpdate:(NSNumber *)fps {
-  if (hasListeners) {
-    [self sendEventWithName:@"onFPSUpdated" body:fps];
-  }
 }
 
 @end

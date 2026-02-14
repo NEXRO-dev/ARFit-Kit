@@ -4,16 +4,25 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-// Swift側で扱いやすいGarment型
+/**
+ * 衣服のブリッジデータ
+ */
 @interface BridgeGarment : NSObject
 @property(nonatomic, readonly) NSString *uuid;
 @property(nonatomic, readonly) NSString *type;
+
+- (instancetype)initWithId:(NSString *)uuid type:(NSString *)type;
 @end
 
+/**
+ * ARFitKitのコアエンジンとネイティブ(iOS)を繋ぐブリッジクラス
+ */
 @interface ARFitKitBridge : NSObject
 
+// シングルトンインスタンス
++ (instancetype)sharedInstance;
+
 // 初期化
-- (instancetype)init;
 - (BOOL)initializeWithConfig:(NSDictionary<NSString *, id> *)config
                        error:(NSError **)error;
 
@@ -24,11 +33,14 @@ NS_ASSUME_NONNULL_BEGIN
 // フレーム処理
 - (void)processFrame:(ARFrame *)frame;
 
+// 最新のレンダリング済み画像
+@property(nonatomic, readonly, nullable) UIImage *lastRenderedImage;
+
 // 衣服操作
 - (void)loadGarment:(UIImage *)image
-               type:(NSString *)type
-         completion:(void (^)(BridgeGarment *_Nullable garment,
-                              NSError *_Nullable error))completion;
+                type:(NSString *)type
+          completion:(void (^)(BridgeGarment *_Nullable garment,
+                               NSError *_Nullable error))completion;
 
 - (void)tryOnGarment:(BridgeGarment *)garment;
 - (void)removeGarment:(BridgeGarment *)garment;
@@ -42,3 +54,4 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 NS_ASSUME_NONNULL_END
+

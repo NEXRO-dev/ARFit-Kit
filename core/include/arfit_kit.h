@@ -1,6 +1,8 @@
 /**
  * @file arfit_kit.h
- * @brief Main ARfit-kit SDK header
+ * @brief ARFit-kit SDK メインヘッダー
+ * 
+ * このファイルは、AR試着機能を利用するための主要なインターフェースを定義します。
  */
 
 #pragma once
@@ -13,126 +15,127 @@
 
 #include <functional>
 #include <memory>
+#include <string>
 
 namespace arfit {
 
 /**
- * @brief Callback for when a frame is processed
+ * @brief フレーム処理完了時のコールバック
  */
 using FrameCallback = std::function<void(const ImageData &frame)>;
 
 /**
- * @brief Callback for body tracking updates
+ * @brief ボディトラッキング更新時のコールバック
  */
 using PoseCallback = std::function<void(const BodyPose &pose)>;
 
 /**
- * @brief Callback for errors
+ * @brief エラー発生時のコールバック
  */
 using ErrorCallback =
     std::function<void(ErrorCode code, const std::string &message)>;
 
 /**
- * @brief Main ARfit-kit SDK class
+ * @brief ARFitKit SDK メインクラス
  *
- * This is the primary interface for using the AR try-on functionality.
+ * AR試着機能を提供するプライマリインターフェースです。
+ * 内部でボディー推定、衣服変換、物理シミュレーション、描画を管理します。
  */
 class ARFitKit {
 public:
   ARFitKit();
   ~ARFitKit();
 
-  // Prevent copying
+  // コピー禁止
   ARFitKit(const ARFitKit &) = delete;
   ARFitKit &operator=(const ARFitKit &) = delete;
 
-  // Allow moving
+  // ムーブ許可
   ARFitKit(ARFitKit &&) noexcept;
   ARFitKit &operator=(ARFitKit &&) noexcept;
 
   /**
-   * @brief Initialize the SDK with configuration
-   * @param config Session configuration
-   * @return Result indicating success or failure
+   * @brief SDKの初期化
+   * @param config セッション設定
+   * @return 初期化結果
    */
   Result<void> initialize(const SessionConfig &config = SessionConfig{});
 
   /**
-   * @brief Start the AR session
-   * @return Result indicating success or failure
+   * @brief ARセッションの開始
+   * @return 実行結果
    */
   Result<void> startSession();
 
   /**
-   * @brief Stop the AR session
+   * @brief ARセッションの停止
    */
   void stopSession();
 
   /**
-   * @brief Check if session is currently active
+   * @brief セッションがアクティブかどうかを確認
    */
   bool isSessionActive() const;
 
   /**
-   * @brief Process a camera frame
-   * @param frame Camera frame to process
-   * @return Processed frame with AR overlay
+   * @brief カメラフレームの処理
+   * @param frame 入力カメラフレーム
+   * @return AR合成済みの画像データ
    */
   Result<ImageData> processFrame(const CameraFrame &frame);
 
   /**
-   * @brief Load a garment from image data
-   * @param image Image data of the garment
-   * @param type Type of garment (optional, will be auto-detected if not
-   * specified)
-   * @return Loaded garment or error
+   * @brief 画像データから衣服を読み込む
+   * @param image 衣服の画像データ
+   * @param type 衣服の種類（指定しない場合は自動判定）
+   * @return 読み込まれた衣服のID
    */
-  Result<std::shared_ptr<Garment>>
+  Result<std::string>
   loadGarment(const ImageData &image, GarmentType type = GarmentType::UNKNOWN);
 
   /**
-   * @brief Load a garment from URL (using hybrid server processing)
-   * @param url URL of the garment image
-   * @return Loaded garment or error
+   * @brief URLから衣服を読み込む（ハイブリッドサーバー処理用）
+   * @param url 衣服画像のURL
+   * @return 読み込まれた衣服のID
    */
-  Result<std::shared_ptr<Garment>> loadGarmentFromUrl(const std::string &url);
+  Result<std::string> loadGarmentFromUrl(const std::string &url);
 
   /**
-   * @brief Try on a garment
-   * @param garment Garment to try on
-   * @return Result indicating success or failure
+   * @brief 衣服を試着する
+   * @param garmentId 試着する衣服のID
+   * @return 実行結果
    */
-  Result<void> tryOn(std::shared_ptr<Garment> garment);
+  Result<void> tryOn(const std::string& garmentId);
 
   /**
-   * @brief Remove a garment
-   * @param garment Garment to remove
+   * @brief 指定した衣服を脱ぐ
+   * @param garmentId 削除する衣服のID
    */
-  void removeGarment(std::shared_ptr<Garment> garment);
+  void removeGarment(const std::string& garmentId);
 
   /**
-   * @brief Remove all garments
+   * @brief すべての衣服を脱ぐ
    */
   void removeAllGarments();
 
   /**
-   * @brief Capture a snapshot of current view
-   * @return Captured image
+   * @brief 現在の表示のスクリーンショットを撮影
+   * @return 撮影された画像データ
    */
   Result<ImageData> captureSnapshot();
 
-  // Callbacks
+  // コールバック設定
   void setFrameCallback(FrameCallback callback);
   void setPoseCallback(PoseCallback callback);
   void setErrorCallback(ErrorCallback callback);
 
-  // Components (for advanced usage)
+  // コンポーネント取得（高度なカスタマイズ用）
   BodyTracker &getBodyTracker();
   GarmentConverter &getGarmentConverter();
   PhysicsEngine &getPhysicsEngine();
   ARRenderer &getARRenderer();
 
-  // Performance metrics
+  // パフォーマンスメトリクス
   float getCurrentFPS() const;
   float getAverageLatency() const;
 
@@ -142,3 +145,4 @@ private:
 };
 
 } // namespace arfit
+
